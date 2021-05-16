@@ -59,7 +59,7 @@ ad1 = Ad { adId = "Sayding_001"
 
 someFunc :: IO ()
 someFunc = do
-  runX $ root [] [makeAds] >>> writeDocument [withIndent yes] "Ads.xml"
+  runX $ root [] [makeAds [ad1, ad1]] >>> writeDocument [withIndent yes] "Ads.xml"
   return ()
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
@@ -87,7 +87,6 @@ makeAd ad =
    where images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
          images ix = map (\i -> mkelem "Image" [ sattr "url" i ] []) ix
 
-makeAds :: ArrowXml a => a XmlTree XmlTree
-makeAds
-    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ]
-        [ makeAd ad1 ]
+makeAds :: ArrowXml a => [Ad] -> a XmlTree XmlTree
+makeAds as
+    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (map makeAd as)
