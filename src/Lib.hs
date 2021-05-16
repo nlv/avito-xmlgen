@@ -49,7 +49,7 @@ instance FromNamedRecord Ad where
          <*> r .: "allowEmail" 
          <*> r .: "managerName" 
          <*> r .: "contactPhone" 
-         <*> ((L.intercalate ", ") <$> filter (\i -> length i > 0) <$> sequenceA (map (r .:) address))
+         <*> ((L.intercalate ", ") <$> filter (not . null) <$> sequenceA (map (r .:) address))
          <*> r .: "category" 
          <*> r .: "condition" 
          <*> r .: "goodsType" 
