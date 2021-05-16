@@ -41,7 +41,7 @@ ad1 = Ad { adId = "Sayding_001"
          , adDescription = description
          , adPrice = "450"
          , adVideoURL = "http://www.youtube.com/watch?v=YKmDXNrDdBI" 
-         , adImages = [ "http://img.test.ru/8F7B-4A4F3A0F2BA1.jpg", "http://img.test.ru/8F7B-4A4F3A0F2XA3.jpg" ]
+         , adImages = [ "http://img.test.ru/8F7B-4A4F3A0F2BA1.JPG", "http://img.test.ru/8F7B-4A4F3A0F2XA3.JPG" ]
          }
   where description = " \
           \ <p>Описание:</p> \
@@ -82,11 +82,10 @@ makeAd ad =
           , mkelem "Description" [] [ constA (adDescription ad) >>> mkCdata ]
           , mkelem "Price" [] [ txt (adPrice ad) ]
           , mkelem "VideoURL" [] [ txt (adVideoURL ad) ]
-          , mkelem "Images" [] $
-              [ mkelem "Image" [ sattr "url" "http://img.test.ru/8F7B-4A4F3A0F2BA1.jpg" ] []
-              , mkelem "Image" [ sattr "url" "http://img.test.ru/8F7B-4A4F3A0F2XA3.jpg" ] []
-              ]
+          , mkelem "Images" [] $ images (adImages ad)
           ]
+   where images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
+         images ix = map (\i -> mkelem "Image" [ sattr "url" i ] []) ix
 
 makeAds :: ArrowXml a => a XmlTree XmlTree
 makeAds
