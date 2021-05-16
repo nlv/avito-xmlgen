@@ -1,28 +1,61 @@
+{-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances #-}
+
 module Lib
     ( someFunc
     ) where
 
+import GHC.Generics
+
+import Control.Applicative
+import qualified Data.ByteString.Lazy as BL
+import Data.Csv
+import qualified Data.Vector as V
+
+import Data.List.Split
+
 import Text.XML.HXT.Core
 
-data Ad = Ad { adId :: String
-             , adDateBegin :: String
-             , adDateEnd :: String
-             , adStatus :: String
-             , adAllowEmail :: String
-             , adManagerName :: String
-             , adContactPhone :: String
-             , adAddress :: String
-             , adCategory :: String
-             , adCondition :: String
-             , adGoodsType :: String
-             , adGoodsSubType :: String
-             , adType :: String
-             , adTitle :: String
-             , adDescription :: String
-             , adPrice :: String
-             , adVideoURL :: String
-             , adImages :: [ String ]
-             }
+data Ad = Ad { adId :: !String
+             , adDateBegin :: !String
+             , adDateEnd :: !String
+             , adStatus :: !String
+             , adAllowEmail :: !String
+             , adManagerName :: !String
+             , adContactPhone :: !String
+             , adAddress :: !String
+             , adCategory :: !String
+             , adCondition :: !String
+             , adGoodsType :: !String
+             , adGoodsSubType :: !String
+             , adType :: !String
+             , adTitle :: !String
+             , adDescription :: !String
+             , adPrice :: !String
+             , adVideoURL :: !String
+             , adImagesDir :: !String
+             } deriving Generic
+
+
+instance FromNamedRecord Ad where
+  parseNamedRecord r = 
+      Ad <$> r .: "id" 
+         <*> r .: "dateBegin" 
+         <*> r .: "dateEnd" 
+         <*> r .: "status" 
+         <*> r .: "allowEmail" 
+         <*> r .: "managerName" 
+         <*> r .: "contactPhone" 
+         <*> ( (++) <$> (r .: "addrCity") <*> (r .: "addrStreet"))
+         <*> r .: "category" 
+         <*> r .: "condition" 
+         <*> r .: "goodsType" 
+         <*> r .: "goodsSubType" 
+         <*> r .: "type" 
+         <*> r .: "title" 
+         <*> r .: "description" 
+         <*> r .: "price" 
+         <*> r .: "videoURL" 
+         <*> r .: "images"
 
 ad1 = Ad { adId = "Sayding_001"
          , adDateBegin = "16.05.2021 10:00"
@@ -41,7 +74,7 @@ ad1 = Ad { adId = "Sayding_001"
          , adDescription = description
          , adPrice = "450"
          , adVideoURL = "http://www.youtube.com/watch?v=YKmDXNrDdBI" 
-         , adImages = [ "http://img.test.ru/8F7B-4A4F3A0F2BA1.JPG", "http://img.test.ru/8F7B-4A4F3A0F2XA3.JPG" ]
+         , adImagesDir = "http://img.test.ru/8F7B-4A4F3A0F2BA1.JPG"
          }
   where description = " \
           \ <p>Описание:</p> \
@@ -59,8 +92,16 @@ ad1 = Ad { adId = "Sayding_001"
 
 someFunc :: IO ()
 someFunc = do
-  runX $ root [] [makeAds [ad1, ad1]] >>> writeDocument [withIndent yes] "Ads.xml"
-  return ()
+  csvData <- BL.readFile "ads.csv"
+  case decodeByName csvData of
+    Left err -> putStrLn err
+    Right (_, v) -> do
+      runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
+      return ()
+{-
+    Right (_, v) -> V.forM_ v $ \ p ->
+      putStrLn $ adAddress p
+-}
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
 makeAd ad = 
@@ -82,7 +123,7 @@ makeAd ad =
           , mkelem "Description" [] [ constA (adDescription ad) >>> mkCdata ]
           , mkelem "Price" [] [ txt (adPrice ad) ]
           , mkelem "VideoURL" [] [ txt (adVideoURL ad) ]
-          , mkelem "Images" [] $ images (adImages ad)
+          , mkelem "Images" [] $ images [adImagesDir ad]
           ]
    where images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
          images ix = map (\i -> mkelem "Image" [ sattr "url" i ] []) ix
