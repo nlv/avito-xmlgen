@@ -8,6 +8,8 @@ import GHC.Generics
 
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BL
+import Data.List as L
+import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
 
@@ -45,7 +47,8 @@ instance FromNamedRecord Ad where
          <*> r .: "allowEmail" 
          <*> r .: "managerName" 
          <*> r .: "contactPhone" 
-         <*> ( (++) <$> (r .: "addrCity") <*> (r .: "addrStreet"))
+         <*> fmap (replace ", ," ",") (r .: "address")
+         -- <*> fmap (L.intercalate ", ") ((:) <$> (r.: "addrStreet") <*> fmap (: []) (r .: "addrHouse"))
          <*> r .: "category" 
          <*> r .: "condition" 
          <*> r .: "goodsType" 
@@ -57,38 +60,6 @@ instance FromNamedRecord Ad where
          <*> r .: "videoURL" 
          <*> r .: "images"
 
-ad1 = Ad { adId = "Sayding_001"
-         , adDateBegin = "16.05.2021 10:00"
-         , adDateEnd = "18.05.2021 10:00"
-         , adStatus = "Free"
-         , adAllowEmail = "Да"
-         , adManagerName = "Илья"
-         , adContactPhone = "8 929 301-42-00"
-         , adAddress = "Омская область, Омск, ул. Осминина, 16"
-         , adCategory = "Ремонт и строительство"
-         , adCondition = "Новое"
-         , adGoodsType = "Стройматериалы"
-         , adGoodsSubType = "Отделка"
-         , adType = "Товар приобретен на продажу"
-         , adTitle = "Сайдинг"
-         , adDescription = description
-         , adPrice = "450"
-         , adVideoURL = "http://www.youtube.com/watch?v=YKmDXNrDdBI" 
-         , adImagesDir = "http://img.test.ru/8F7B-4A4F3A0F2BA1.JPG"
-         }
-  where description = " \
-          \ <p>Описание:</p> \
-          \ <ul> \
-          \ <li>Сайдинг металлический, виниловый! \
-          \ <li>Работаем без посредников! \
-          \ <li>Свой цех! \
-          \ <li>Монтаж в короткие сроки! \
-          \ <li>Качество гарантируем! \
-          \ <li>Скидки всем! \
-          \ <li>Рассрочка до 20 мес, без банка! \
-          \ <li>Замер и консультация специалиста бесплатно! \
-          \ </ul>"
-
 
 someFunc :: IO ()
 someFunc = do
@@ -98,10 +69,6 @@ someFunc = do
     Right (_, v) -> do
       runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
       return ()
-{-
-    Right (_, v) -> V.forM_ v $ \ p ->
-      putStrLn $ adAddress p
--}
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
 makeAd ad = 
