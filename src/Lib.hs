@@ -14,11 +14,7 @@ import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
 
-import Text.Pandoc.Writers
-import Text.Pandoc.Readers
-import Text.Pandoc.Options
-import Text.Pandoc.Class
-import Text.Pandoc.Error
+import Text.Pandoc
 
 import Data.Text
 import Data.Set as S
@@ -71,7 +67,7 @@ instance FromNamedRecord Ad where
          <*> r .: "videoURL" 
 --                <*> r .: "images"
       where address = ["addrRegion", "addrArea", "addrCity", "addrPoint", "addrStreet", "addrHouse"]
-            -- descriptionHtml d = either (unpack . encodeUtf8 . renderError) id $ runPure (descriptionHtml2 d)
+            -- descriptionHtml d = either (unpack . renderError) id $ runPure (descriptionHtml2 d)
             descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
             descriptionHtml2 d = do
               d1 <- readMarkdown def (pack d)
