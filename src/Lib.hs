@@ -49,8 +49,7 @@ instance FromNamedRecord Ad where
          <*> r .: "allowEmail" 
          <*> r .: "managerName" 
          <*> r .: "contactPhone" 
-         -- <*> fmap ((replace ", ," ",") . (replace ", ," ",")) (r .: "address")
-         <*> fmap (L.intercalate ", ") ((:) <$> (r.: "addrRegion") <*> fmap (: []) (r .: "addrCity"))
+         <*> ((L.intercalate ", ") <$> filter (\i -> length i > 0) <$> sequenceA (map (r .:) address))
          <*> r .: "category" 
          <*> r .: "condition" 
          <*> r .: "goodsType" 
@@ -61,6 +60,8 @@ instance FromNamedRecord Ad where
          <*> r .: "price" 
          <*> r .: "videoURL" 
 --                <*> r .: "images"
+      where address = ["addrRegion", "addrArea", "addrCity", "addrPoint", "addrStreet", "addrHouse"]
+
 
 
 someFunc :: IO ()
