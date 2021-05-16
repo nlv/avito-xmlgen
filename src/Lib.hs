@@ -8,11 +8,21 @@ import GHC.Generics
 
 import Control.Applicative
 import Control.Monad (mzero)
-import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy as BL 
 import Data.List as L
 import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
+
+import Text.Pandoc.Writers
+import Text.Pandoc.Readers
+import Text.Pandoc.Options
+import Text.Pandoc.Class
+import Text.Pandoc.Error
+
+import Data.Text
+import Data.Set as S
+import Data.Default
 
 import Data.List.Split
 
@@ -49,19 +59,24 @@ instance FromNamedRecord Ad where
          <*> r .: "allowEmail" 
          <*> r .: "managerName" 
          <*> r .: "contactPhone" 
-         <*> ((L.intercalate ", ") <$> filter (not . null) <$> sequenceA (map (r .:) address))
+         <*> ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
          <*> r .: "category" 
          <*> r .: "condition" 
          <*> r .: "goodsType" 
          <*> r .: "goodsSubType" 
          <*> r .: "type" 
          <*> r .: "title" 
-         <*> r .: "description" 
+         <*> (fmap descriptionHtml (r .: "description"))
          <*> r .: "price" 
          <*> r .: "videoURL" 
 --                <*> r .: "images"
       where address = ["addrRegion", "addrArea", "addrCity", "addrPoint", "addrStreet", "addrHouse"]
-
+            -- descriptionHtml d = either (unpack . encodeUtf8 . renderError) id $ runPure (descriptionHtml2 d)
+            descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
+            descriptionHtml2 d = do
+              d1 <- readMarkdown def (pack d)
+              d2 <- writeHtml5String def d1
+              return $ unpack d2            
 
 
 someFunc :: IO ()
@@ -96,7 +111,7 @@ makeAd ad =
           , mkelem "Images" [] $ images (adTitle ad)
           ]
    where images :: ArrowXml a => String -> [a XmlTree XmlTree]
-         images title = map (\i -> mkelem "Image" [ sattr "name" i ] []) (imagesSet title)
+         images title = L.map (\i -> mkelem "Image" [ sattr "name" i ] []) (imagesSet title)
 
 imagesSet "Металлочерепица, металосайдинг, профнастил" = 
   [ "https://sun9-67.userapi.com/impg/LsMFd-8xdiKyWCSKY2wzeD0hIbK4ixzRH2we0g/l3x4ZHv2_3U.jpg?size=1365x960&quality=96&sign=e24146baaf99fb811e1c16442600c828"
@@ -116,4 +131,4 @@ imagesSet _ = []
 
 makeAds :: ArrowXml a => [Ad] -> a XmlTree XmlTree
 makeAds as
-    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (map makeAd as)
+    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map makeAd as)

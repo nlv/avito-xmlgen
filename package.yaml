@@ -27,6 +27,10 @@ dependencies:
 - vector
 - split
 - MissingH
+- pandoc
+- text
+- containers
+- data-default
 
 library:
   source-dirs: src
