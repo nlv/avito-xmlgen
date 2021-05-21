@@ -1,4 +1,4 @@
-{-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances #-}
+{-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances, RecordWildCards #-}
 
 module Lib
     ( someFunc
@@ -15,10 +15,16 @@ import Data.Csv
 import qualified Data.Vector as V
 
 import Text.Pandoc
+import Network.Curl.Download
+import Network.Curl.Opts
 
-import Data.Text
-import Data.Set as S
+import Text.URI
+
+import Data.Text as T
+import Data.Text.Encoding
+import Data.Set as S 
 import Data.Default
+import Data.List.NonEmpty as NEL
 
 import Data.List.Split as Split
 
@@ -75,13 +81,34 @@ instance FromNamedRecord Ad where
 
 
 someFunc :: IO ()
-someFunc = do
-  csvData <- BL.readFile "ads.csv"
-  case decodeByName csvData of
-    Left err -> putStrLn err
-    Right (_, v) -> do
-      runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
-      return ()
+someFunc = 
+  let src ="https://docs.google.com/spreadsheets/d/1yBrR00DiBGY1p3x5HI2-nh27d57QHaLZ7CInP-anNWU/edit#gid=419679826" in
+  case makeGoogleExportCSVURI src of
+    Nothing -> putStrLn "Не верный URL"
+    Just src' -> do
+      putStrLn $ "src = " ++ src'
+      csvData' <- openURIWithOpts [CurlFollowLocation True] $ src'
+      case csvData' of
+        Left err -> putStrLn $ "Error: " ++ err
+        Right csvData ->
+          let l = encodeUtf8 $ T.unlines $ L.drop 3 $ T.lines $ decodeUtf8 csvData in
+          case decodeByName (BL.fromStrict l) of
+            Left err -> putStrLn err
+            Right (_, v) -> do
+              runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
+              return ()
+
+makeGoogleExportCSVURI :: String -> Maybe String
+makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) >>= convertURI)
+   where convertURI URI { uriPath = Nothing, ..} = Nothing
+         convertURI u@(URI { uriPath = (Just (s, p)), uriQuery = qs, ..}) = do
+           p' <- sequence $ NEL.filter (\i -> i /= mkPathPiece "edit") (NEL.map Just p) 
+           exportPath <- mkPathPiece "export"
+           formatParam <- QueryParam <$> mkQueryKey "format" <*> mkQueryValue "csv"
+           let p'' = p' ++ [exportPath]
+           p''' <- if L.null p'' then Nothing else Just $ u {uriPath = Just (s, (L.head p'') NEL.:| L.tail p''),
+                                                             uriQuery = formatParam : qs}
+           return p'''
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
 makeAd ad = 

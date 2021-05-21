@@ -36,8 +36,11 @@ library
     , bytestring
     , cassava
     , containers
+    , curl
     , data-default
+    , download-curl
     , hxt
+    , modern-uri
     , pandoc
     , split
     , text
@@ -58,8 +61,11 @@ executable avito-exe
     , bytestring
     , cassava
     , containers
+    , curl
     , data-default
+    , download-curl
     , hxt
+    , modern-uri
     , pandoc
     , split
     , text
@@ -81,8 +87,11 @@ test-suite avito-test
     , bytestring
     , cassava
     , containers
+    , curl
     , data-default
+    , download-curl
     , hxt
+    , modern-uri
     , pandoc
     , split
     , text

@@ -31,6 +31,9 @@ dependencies:
 - text
 - containers
 - data-default
+- curl
+- download-curl
+- modern-uri
 
 library:
   source-dirs: src
