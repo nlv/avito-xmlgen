@@ -7,7 +7,7 @@ module Lib
 import GHC.Generics
 
 import Control.Applicative
-import Control.Monad (mzero)
+import Control.Monad (mzero, guard)
 import qualified Data.ByteString.Lazy as BL 
 import Data.List as L
 import Data.List.Utils (replace)
@@ -82,10 +82,11 @@ instance FromNamedRecord Ad where
 
 someFunc :: IO ()
 someFunc = 
-  let src ="https://docs.google.com/spreadsheets/d/1yBrR00DiBGY1p3x5HI2-nh27d57QHaLZ7CInP-anNWU/edit#gid=419679826" in
+  let src = "https://docs.google.com/spreadsheets/d/1yBrR00DiBGY1p3x5HI2-nh27d57QHaLZ7CInP-anNWU/edit#gid=1638214900" in
   case makeGoogleExportCSVURI src of
     Nothing -> putStrLn "Не верный URL"
     Just src' -> do
+      putStrLn "Hello"
       putStrLn $ "src = " ++ src'
       csvData' <- openURIWithOpts [CurlFollowLocation True] $ src'
       case csvData' of
@@ -101,13 +102,17 @@ someFunc =
 makeGoogleExportCSVURI :: String -> Maybe String
 makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) >>= convertURI)
    where convertURI URI { uriPath = Nothing, ..} = Nothing
-         convertURI u@(URI { uriPath = (Just (s, p)), uriQuery = qs, ..}) = do
+         convertURI u@(URI { uriPath = (Just (s, p)), uriQuery = qs, uriFragment = frag, ..}) = do
            p' <- sequence $ NEL.filter (\i -> i /= mkPathPiece "edit") (NEL.map Just p) 
            exportPath <- mkPathPiece "export"
            formatParam <- QueryParam <$> mkQueryKey "format" <*> mkQueryValue "csv"
+           gidHash <- (T.splitOn "=") . unRText <$> frag
+           guard (L.length gidHash == 2)
+           guard (L.head gidHash == "gid")
+           gidParam <- QueryParam <$> mkQueryKey "gid" <*> mkQueryValue (L.head $ L.tail gidHash)
            let p'' = p' ++ [exportPath]
            p''' <- if L.null p'' then Nothing else Just $ u {uriPath = Just (s, (L.head p'') NEL.:| L.tail p''),
-                                                             uriQuery = formatParam : qs}
+                                                             uriQuery = formatParam : gidParam : qs, uriFragment = Nothing}
            return p'''
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
