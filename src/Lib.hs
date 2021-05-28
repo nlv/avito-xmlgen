@@ -53,24 +53,24 @@ data Ad = Ad { adId :: !String
 
 instance FromNamedRecord Ad where
   parseNamedRecord r = 
-      Ad <$> r .: "id" 
-         <*> r .: "dateBegin" 
-         <*> r .: "dateEnd" 
-         <*> r .: "status" 
-         <*> r .: "allowEmail" 
-         <*> r .: "managerName" 
-         <*> r .: "contactPhone" 
+      Ad <$> r .: "Id" 
+         <*> r .: "DateBegin" 
+         <*> r .: "DateEnd" 
+         <*> r .: "AdStatus" 
+         <*> r .: "AllowEmail" 
+         <*> r .: "ManagerName" 
+         <*> r .: "ContactPhone" 
          <*> ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
-         <*> r .: "category" 
-         <*> r .: "condition" 
-         <*> r .: "goodsType" 
-         <*> r .: "goodsSubType" 
-         <*> r .: "type" 
-         <*> r .: "title" 
-         <*> (fmap descriptionHtml (r .: "description"))
-         <*> r .: "price" 
-         <*> r .: "videoURL" 
-         <*> ((Split.splitOn ",") <$> r .:  "images")
+         <*> r .: "Category" 
+         <*> r .: "Condition" 
+         <*> r .: "GoodsType" 
+         <*> r .: "GoodsSubType" 
+         <*> r .: "AdType" 
+         <*> r .: "Title" 
+         <*> (fmap descriptionHtml (r .: "Description"))
+         <*> r .: "Price" 
+         <*> r .: "VideoURL" 
+         <*> ((Split.splitOn ",") <$> r .:  "ImageNames")
       where address = ["addrRegion", "addrArea", "addrCity", "addrPoint", "addrStreet", "addrHouse"]
             -- descriptionHtml d = either (unpack . renderError) id $ runPure (descriptionHtml2 d)
             descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
@@ -82,7 +82,7 @@ instance FromNamedRecord Ad where
 
 someFunc :: IO ()
 someFunc = 
-  let src = "https://docs.google.com/spreadsheets/d/1yBrR00DiBGY1p3x5HI2-nh27d57QHaLZ7CInP-anNWU/edit#gid=1638214900" in
+  let src = "https://docs.google.com/spreadsheets/d/1oXbKqfpc6Qal5cpSf3cQtjdaGoON6OfvkUkOA62s-8A/edit#gid=1775446752" in
   case makeGoogleExportCSVURI src of
     Nothing -> putStrLn "Не верный URL"
     Just src' -> do
@@ -116,6 +116,26 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) 
            return p'''
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
+makeAd ad@(Ad {adGoodsType = "Вакансии", ..}) = 
+        mkelem "Ad" []
+          [ mkelem "Id" [] [ txt (adId) ]
+          , mkelem "DateBegin" [] [ txt (adDateBegin) ]
+          , mkelem "DateEnd" [] [ txt (adDateEnd) ]
+          , mkelem "Status" [] [ txt (adStatus) ]
+          , mkelem "AllowEmail" [] [ txt (adAllowEmail) ]
+          , mkelem "ManagerName" [] [ txt (adManagerName) ]
+          , mkelem "ContactPhone" [] [ txt (adContactPhone) ]
+          , mkelem "Address" [] [ txt (adAddress) ]
+          , mkelem "Category" [] [ txt (adGoodsType ad) ]
+          , mkelem "Condition" [] [ txt (adCondition) ]
+          , mkelem "Industry" [] [ txt (adGoodsSubType) ]
+          , mkelem "JobType" [] [ txt (adType) ]
+          , mkelem "Title" [] [ txt (adTitle) ]
+          , mkelem "Description" [] [ constA (adDescription) >>> mkCdata ]
+          , mkelem "Salary" [] [ txt (adPrice) ]
+          , mkelem "VideoURL" [] [ txt (adVideoURL) ]
+          , mkelem "Images" [] $ images (adImages)
+          ]
 makeAd ad = 
         mkelem "Ad" []
           [ mkelem "Id" [] [ txt (adId ad) ]
@@ -137,8 +157,9 @@ makeAd ad =
           , mkelem "VideoURL" [] [ txt (adVideoURL ad) ]
           , mkelem "Images" [] $ images (adImages ad)
           ]
-   where images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
-         images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) is
+
+images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
+images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) is
 
 makeAds :: ArrowXml a => [Ad] -> a XmlTree XmlTree
 makeAds as
