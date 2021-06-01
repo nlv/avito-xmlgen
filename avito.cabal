@@ -41,6 +41,7 @@ library
     , download-curl
     , hxt
     , modern-uri
+    , optparse-applicative
     , pandoc
     , split
     , text
@@ -66,6 +67,7 @@ executable avito-exe
     , download-curl
     , hxt
     , modern-uri
+    , optparse-applicative
     , pandoc
     , split
     , text
@@ -92,6 +94,7 @@ test-suite avito-test
     , download-curl
     , hxt
     , modern-uri
+    , optparse-applicative
     , pandoc
     , split
     , text

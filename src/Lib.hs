@@ -14,6 +14,8 @@ import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
 
+import Options.Applicative
+
 import Text.Pandoc
 import Network.Curl.Download
 import Network.Curl.Opts
@@ -82,7 +84,8 @@ instance FromNamedRecord Ad where
 
 someFunc :: IO ()
 someFunc = 
-  let src = "https://docs.google.com/spreadsheets/d/1oXbKqfpc6Qal5cpSf3cQtjdaGoON6OfvkUkOA62s-8A/edit#gid=1775446752" in
+  let ops = argument str (help "URL of data") in do
+  src <- execParser $ info (ops <**> helper) (fullDesc <> progDesc "Converting Avito posts" <> Options.Applicative.header "header")
   case makeGoogleExportCSVURI src of
     Nothing -> putStrLn "Не верный URL"
     Just src' -> do
