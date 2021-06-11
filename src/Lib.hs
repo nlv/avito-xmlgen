@@ -22,6 +22,8 @@ import Network.Curl.Opts
 
 import Text.URI
 
+import Data.Char (isSpace)
+
 import Data.Text as T
 import Data.Text.Encoding
 import Data.Set as S 
@@ -56,8 +58,8 @@ data Ad = Ad { adId :: !String
 instance FromNamedRecord Ad where
   parseNamedRecord r = 
       Ad <$> r .: "Id" 
-         <*> r .: "DateBegin" 
-         <*> r .: "DateEnd" 
+         <*> (trimString <$> (r .: "DateBegin"))
+         <*> (trimString <$> (r .: "DateEnd"))
          <*> r .: "AdStatus" 
          <*> r .: "AllowEmail" 
          <*> r .: "ManagerName" 
@@ -80,6 +82,8 @@ instance FromNamedRecord Ad where
               d1 <- readMarkdown def (pack d)
               d2 <- writeHtml5String def d1
               return $ unpack d2            
+
+trimString = L.dropWhileEnd isSpace . L.dropWhile isSpace
 
 
 someFunc :: IO ()
