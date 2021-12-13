@@ -43,10 +43,12 @@ data Ad = Ad { adId :: !String
              , adContactPhone :: !String
              , adAddress :: !String
              , adCategory :: !String
-             , adCondition :: !String
-             , adGoodsType :: !String
-             , adGoodsSubType :: !String
-             , adType :: !String
+            --  , adCondition :: !String
+            --  , adGoodsType :: !String
+            --  , adGoodsSubType :: !String
+            --  , adType :: !String
+             , adServiceType :: !String
+             , adServiceSubType :: !String            
              , adTitle :: !String
              , adDescription :: !String
              , adPrice :: !String
@@ -66,10 +68,12 @@ instance FromNamedRecord Ad where
          <*> r .: "ContactPhone" 
          <*> ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
          <*> r .: "Category" 
-         <*> r .: "Condition" 
-         <*> r .: "GoodsType" 
-         <*> r .: "GoodsSubType" 
-         <*> r .: "AdType" 
+        --  <*> (r .: "Condition")
+        --  <*> r .: "GoodsType" 
+        --  <*> r .: "GoodsSubType" 
+        --  <*> r .: "AdType" 
+         <*> r .: "ServiceType" 
+         <*> r .: "ServiceSubType"         
          <*> r .: "Title" 
          <*> (fmap descriptionHtml (r .: "Description"))
          <*> r .: "Price" 
@@ -123,26 +127,26 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) 
            return p'''
 
 makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
-makeAd ad@(Ad {adGoodsType = "Вакансии", ..}) = 
-        mkelem "Ad" []
-          [ mkelem "Id" [] [ txt (adId) ]
-          , mkelem "DateBegin" [] [ txt (adDateBegin) ]
-          , mkelem "DateEnd" [] [ txt (adDateEnd) ]
-          , mkelem "Status" [] [ txt (adStatus) ]
-          , mkelem "AllowEmail" [] [ txt (adAllowEmail) ]
-          , mkelem "ManagerName" [] [ txt (adManagerName) ]
-          , mkelem "ContactPhone" [] [ txt (adContactPhone) ]
-          , mkelem "Address" [] [ txt (adAddress) ]
-          , mkelem "Category" [] [ txt (adGoodsType ad) ]
-          , mkelem "Condition" [] [ txt (adCondition) ]
-          , mkelem "Industry" [] [ txt (adGoodsSubType) ]
-          , mkelem "JobType" [] [ txt (adType) ]
-          , mkelem "Title" [] [ txt (adTitle) ]
-          , mkelem "Description" [] [ constA (adDescription) >>> mkCdata ]
-          , mkelem "Salary" [] [ txt (adPrice) ]
-          , mkelem "VideoURL" [] [ txt (adVideoURL) ]
-          , mkelem "Images" [] $ images (adImages)
-          ]
+-- makeAd ad@(Ad {adGoodsType = "Вакансии", ..}) = 
+--         mkelem "Ad" []
+--           [ mkelem "Id" [] [ txt (adId) ]
+--           , mkelem "DateBegin" [] [ txt (adDateBegin) ]
+--           , mkelem "DateEnd" [] [ txt (adDateEnd) ]
+--           , mkelem "Status" [] [ txt (adStatus) ]
+--           , mkelem "AllowEmail" [] [ txt (adAllowEmail) ]
+--           , mkelem "ManagerName" [] [ txt (adManagerName) ]
+--           , mkelem "ContactPhone" [] [ txt (adContactPhone) ]
+--           , mkelem "Address" [] [ txt (adAddress) ]
+--           , mkelem "Category" [] [ txt (adGoodsType ad) ]
+--           -- , mkelem "Condition" [] [ txt (adCondition) ]
+--           , mkelem "Industry" [] [ txt (adGoodsSubType) ]
+--           , mkelem "JobType" [] [ txt (adType) ]
+--           , mkelem "Title" [] [ txt (adTitle) ]
+--           , mkelem "Description" [] [ constA (adDescription) >>> mkCdata ]
+--           , mkelem "Salary" [] [ txt (adPrice) ]
+--           , mkelem "VideoURL" [] [ txt (adVideoURL) ]
+--           , mkelem "Images" [] $ images (adImages)
+--           ]
 makeAd ad = 
         mkelem "Ad" []
           [ mkelem "Id" [] [ txt (adId ad) ]
@@ -154,10 +158,12 @@ makeAd ad =
           , mkelem "ContactPhone" [] [ txt (adContactPhone ad) ]
           , mkelem "Address" [] [ txt (adAddress ad) ]
           , mkelem "Category" [] [ txt (adCategory ad) ]
-          , mkelem "Condition" [] [ txt (adCondition ad) ]
-          , mkelem "GoodsType" [] [ txt (adGoodsType ad) ]
-          , mkelem "GoodsSubType" [] [ txt (adGoodsSubType ad) ]
-          , mkelem "Type" [] [ txt (adType ad) ]
+          -- , mkelem "Condition" [] [ txt (adCondition ad) ]
+          -- , mkelem "GoodsType" [] [ txt (adGoodsType ad) ]
+          -- , mkelem "GoodsSubType" [] [ txt (adGoodsSubType ad) ]
+          -- , mkelem "Type" [] [ txt (adType ad) ]
+          , mkelem "ServiceType" [] [ txt (adServiceType ad) ]
+          , mkelem "ServiceSubType" [] [ txt (adServiceSubType ad) ]          
           , mkelem "Title" [] [ txt (adTitle ad) ]
           , mkelem "Description" [] [ constA (adDescription ad) >>> mkCdata ]
           , mkelem "Price" [] [ txt (adPrice ad) ]
