@@ -172,7 +172,7 @@ makeAd ad =
           ]
 
 images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
-images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) is
+images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ (L.take 8) is
 
 makeAds :: ArrowXml a => [Ad] -> a XmlTree XmlTree
 makeAds as
