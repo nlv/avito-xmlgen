@@ -34,14 +34,13 @@ dependencies:
 - curl
 - download-curl
 - modern-uri
-- optparse-applicative
 
 library:
   source-dirs: src
 
 executables:
-  avito-exe:
-    main:                Main.hs
+  avito-xmlgen-exe:
+    main:                Console.hs
     source-dirs:         app
     ghc-options:
     - -threaded
@@ -49,6 +48,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - avito
+    - optparse-applicative
 
 tests:
   avito-test:
