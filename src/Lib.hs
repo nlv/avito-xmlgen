@@ -1,7 +1,7 @@
 {-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances, RecordWildCards #-}
 
 module Lib
-    ( someFunc
+    ( generateXML
     ) where
 
 import GHC.Generics
@@ -14,7 +14,7 @@ import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
 
-import Options.Applicative
+
 
 import Text.Pandoc
 import Network.Curl.Download
@@ -33,6 +33,7 @@ import Data.List.NonEmpty as NEL
 import Data.List.Split as Split
 
 import Text.XML.HXT.Core
+import qualified Text.XML.HXT.DOM.XmlNode as Node
 
 data Ad = Ad { adId :: !String
              , adDateBegin :: !String
@@ -88,27 +89,26 @@ instance FromNamedRecord Ad where
               return $ unpack d2            
 
 trimString = L.dropWhileEnd isSpace . L.dropWhile isSpace
+ 
 
-
-someFunc :: IO ()
-someFunc = 
-  let ops = argument str (help "URL of data") in do
-  src <- execParser $ info (ops <**> helper) (fullDesc <> progDesc "Converting Avito posts" <> Options.Applicative.header "header")
+generateXML :: String -> IO (Either String String)
+generateXML src = 
   case makeGoogleExportCSVURI src of
-    Nothing -> putStrLn "Не верный URL"
+    Nothing -> pure $ Left "Не верный URL"
     Just src' -> do
-      putStrLn "Hello"
-      putStrLn $ "src = " ++ src'
       csvData' <- openURIWithOpts [CurlFollowLocation True] $ src'
       case csvData' of
-        Left err -> putStrLn $ "Error: " ++ err
+        Left err -> pure $ Left err
         Right csvData ->
           let l = encodeUtf8 $ T.unlines $ L.drop 3 $ T.lines $ decodeUtf8 csvData in
           case decodeByName (BL.fromStrict l) of
-            Left err -> putStrLn err
+            Left err -> pure $ Left err
             Right (_, v) -> do
-              runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
-              return ()
+              [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocumentToString [withIndent yes]
+              pure $ Right res
+              -- pure $ Right $ decodeUtf8 $ BL.toStrict res
+              -- [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
+              -- pure $ Right $ Node.toText res
 
 makeGoogleExportCSVURI :: String -> Maybe String
 makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) >>= convertURI)
