@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Generator
   other-modules:
       Paths_avito
   hs-source-dirs:
@@ -41,15 +41,14 @@ library
     , download-curl
     , hxt
     , modern-uri
-    , optparse-applicative
     , pandoc
     , split
     , text
     , vector
   default-language: Haskell2010
 
-executable avito-exe
-  main-is: Main.hs
+executable avito-xmlgen-exe
+  main-is: Console.hs
   other-modules:
       Paths_avito
   hs-source-dirs:
@@ -94,7 +93,6 @@ test-suite avito-test
     , download-curl
     , hxt
     , modern-uri
-    , optparse-applicative
     , pandoc
     , split
     , text

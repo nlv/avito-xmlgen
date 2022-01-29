@@ -1,6 +1,6 @@
 {-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances, RecordWildCards #-}
 
-module Lib
+module Generator
     ( generateXML
     ) where
 
