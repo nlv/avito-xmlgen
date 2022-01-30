@@ -34,14 +34,20 @@ dependencies:
 - curl
 - download-curl
 - modern-uri
+- servant-server  
+- servant-options
+- wai
+- wai-cors
+- http-types
+- warp
 
 library:
   source-dirs: src
 
 executables:
   avito-xmlgen-exe:
-    main:                Console.hs
-    source-dirs:         app
+    main:                Main.hs
+    source-dirs:         app/console
     ghc-options:
     - -threaded
     - -rtsopts
@@ -49,6 +55,18 @@ executables:
     dependencies:
     - avito
     - optparse-applicative
+  avito-xmlapi-exe:
+    main:                Main.hs
+    source-dirs:         app/api
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - avito
+    - servant
+    - servant-server  
+    - servant-options
 
 tests:
   avito-test:

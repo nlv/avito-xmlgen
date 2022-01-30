@@ -42,6 +42,7 @@ packages:
 #
 extra-deps: [
   "download-curl-0.1.4@sha256:d4df109a694aacf11814f7d0ea8df2aa6b187ea894f1e6ae1bddae635f0a4e0c,1695"
+, "servant-options-0.1.0.0@sha256:39f50166a68006250e79370372f553ca476f14d06d93fa0c401050253aeba803,914"
 ]
 
 # Override default flag values for local packages and extra-deps
