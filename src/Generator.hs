@@ -87,7 +87,7 @@ instance FromNamedRecord Ad where
 trimString = L.dropWhileEnd isSpace . L.dropWhile isSpace
  
 
-generateXML :: String -> IO (Either String String)
+generateXML :: Text -> IO (Either String String)
 generateXML src = 
   case makeGoogleExportCSVURI src of
     Nothing -> pure $ Left "Не верный URL"
@@ -106,8 +106,8 @@ generateXML src =
               -- [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
               -- pure $ Right $ Node.toText res
 
-makeGoogleExportCSVURI :: String -> Maybe String
-makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI $ T.pack x) >>= convertURI)
+makeGoogleExportCSVURI :: Text -> Maybe String
+makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= convertURI)
    where convertURI URI { uriPath = Nothing, ..} = Nothing
          convertURI u@(URI { uriPath = (Just (s, p)), uriQuery = qs, uriFragment = frag, ..}) = do
            p' <- sequence $ NEL.filter (\i -> i /= mkPathPiece "edit") (NEL.map Just p) 
