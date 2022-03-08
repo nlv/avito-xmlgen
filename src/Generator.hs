@@ -55,6 +55,21 @@ data Ad = Ad { adId :: !String
              , adPrice :: !String
              , adVideoURL :: !String
              , adImages :: ![String]
+             , adWorkTypes :: ![String]
+             , adWorkExperience :: !String
+             , adGuarantee :: !String
+             , adWorkWithContract :: !String
+             , adTeamSize :: ![String]
+             , adContactDays :: ![String]
+             , adWorkDays :: ![String]
+             , adUrgency :: !String
+             , adMaterialPurchase :: !String
+             , adContactTimeFrom :: !String
+             , adContactTimeTo :: !String
+             , adWorkTimeFrom :: !String
+             , adWorkTimeTo :: !String
+             , adSpecialty :: !String
+             , adAccommodation :: !String
              } deriving Generic
 
 
@@ -67,19 +82,35 @@ instance FromNamedRecord Ad where
          <*> r .: "AllowEmail" 
          <*> r .: "ManagerName" 
          <*> r .: "ContactPhone" 
-         <*> ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
-         <*> r .: "Category" 
+        --  <*> r .: "addRegion" 
+         <*>  ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
+         <*>  r .: "Category" 
         --  <*> (r .: "Condition")
         --  <*> r .: "GoodsType" 
         --  <*> r .: "GoodsSubType" 
         --  <*> r .: "AdType" 
-         <*> r .: "ServiceType" 
-         <*> r .: "ServiceSubType"         
-         <*> r .: "Title" 
-         <*> (fmap descriptionHtml (r .: "Description"))
-         <*> r .: "Price" 
-         <*> r .: "VideoURL" 
+         <*>  r .: "ServiceType" 
+         <*>  r .: "ServiceSubType"         
+         <*>  r .: "Title" 
+         <*>  (fmap descriptionHtml (r .: "Description"))
+         <*>  r .: "Price" 
+         <*>  r .: "VideoURL" 
          <*> ((Split.splitOn ",") <$> r .:  "ImageNames")
+         <*>  (((L.map trimString) . (Split.splitOn "|")) <$> r .:  "WorkTypes")
+         <*>  r .: "WorkExperience"
+         <*>  r .: "Guarantee"
+         <*>  r .: "WorkWithContract"
+         <*>  (((L.map trimString) . (Split.splitOn "|")) <$> r .:  "TeamSize")
+         <*>  (((L.map trimString) . (Split.splitOn "|")) <$> r .:  "ContactDays")
+         <*> (((L.map trimString) . (Split.splitOn "|")) <$> r .:  "WorkDays")
+         <*>  r .: "Urgency"
+         <*>  r .: "MaterialPurchase"
+         <*>  r .: "ContactTimeFrom"
+         <*>  r .: "ContactTimeTo"
+         <*>  r .: "WorkTimeFrom"
+         <*>  r .: "WorkTimeTo"
+         <*>  r .: "Specialty"
+         <*>  r .: "Accommodation"
       where address = ["addrRegion", "addrArea", "addrCity", "addrPoint", "addrStreet", "addrHouse"]
             -- descriptionHtml d = either (unpack . renderError) id $ runPure (descriptionHtml2 d)
             descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
@@ -100,9 +131,10 @@ generateXML src =
       case csvData' of
         Left err -> pure $ Left err
         Right csvData ->
-          let l = encodeUtf8 $ T.unlines $ L.drop 3 $ T.lines $ decodeUtf8 csvData in
+          let l = encodeUtf8 $ T.unlines $ L.drop 1 $ T.lines $ decodeUtf8 csvData in
           case decodeByName (BL.fromStrict l) of
-            Left err -> pure $ Left err
+            Left err -> pure $ Left ("HELLO!!! " ++ err)
+            -- Left err -> pure $ Left "HEKKO"
             Right (_, v) -> do
               [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocumentToString [withIndent yes]
               pure $ Right res
@@ -169,10 +201,29 @@ makeAd ad =
           , mkelem "Price" [] [ txt (adPrice ad) ]
           , mkelem "VideoURL" [] [ txt (adVideoURL ad) ]
           , mkelem "Images" [] $ images (adImages ad)
+
+         , mkelem "WorkTypes" [] $ options (adWorkTypes ad)
+         , mkelem "WorkExperience" [] [ txt (adWorkExperience ad) ]
+         , mkelem "Guarantee" [] [ txt (adGuarantee ad) ]
+         , mkelem "WorkWithContract" [] [ txt (adWorkWithContract ad) ]
+         , mkelem "TeamSize" [] $ options (adTeamSize ad)
+         , mkelem "ContactDays" [] $ options (adContactDays ad)
+         , mkelem "WorkDays" [] $ options (adWorkDays ad)
+         , mkelem "Urgency" [] [ txt (adUrgency ad) ]
+         , mkelem "MaterialPurchase" [] [ txt (adMaterialPurchase ad) ]
+         , mkelem "ContactTimeFrom" [] [ txt (adContactTimeFrom ad) ]
+         , mkelem "ContactTimeTo" [] [ txt (adContactTimeTo ad) ]
+         , mkelem "WorkTimeFrom" [] [ txt (adWorkTimeFrom ad) ]
+         , mkelem "WorkTimeTo" [] [ txt (adWorkTimeTo ad) ]
+         , mkelem "Specialty" [] [ txt (adSpecialty ad) ]
+         , mkelem "Accommodation" [] [ txt (adAccommodation ad) ]
           ]
 
 images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
 images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ (L.take 8) is
+
+options :: ArrowXml a => [String] -> [a XmlTree XmlTree]
+options is = L.map (\i -> mkelem "Option" [] [ txt i]) is
 
 makeAds :: ArrowXml a => [Ad] -> a XmlTree XmlTree
 makeAds as
