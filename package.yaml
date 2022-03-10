@@ -79,10 +79,10 @@ executables:
     - optparse-applicative
     - aeson
     - http-conduit
-    # - avito
-    # - servant
-    # - servant-server  
-    # - servant-options    
+    - conduit
+    - xlsx
+    - lens
+    - time
 
 tests:
   avito-test:

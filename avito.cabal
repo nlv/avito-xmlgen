@@ -130,6 +130,7 @@ executable randtext-exe
     , base >=4.7 && <5
     , bytestring
     , cassava
+    , conduit
     , containers
     , curl
     , data-default
@@ -137,6 +138,7 @@ executable randtext-exe
     , http-conduit
     , http-types
     , hxt
+    , lens
     , modern-uri
     , optparse-applicative
     , pandoc
@@ -144,10 +146,12 @@ executable randtext-exe
     , servant-server
     , split
     , text
+    , time
     , vector
     , wai
     , wai-cors
     , warp
+    , xlsx
   default-language: Haskell2010
 
 test-suite avito-test
