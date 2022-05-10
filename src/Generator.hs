@@ -100,7 +100,7 @@ generateXML src =
           case decodeByName (BL.fromStrict l) of
             Left err -> pure $ Left err
             Right (_, v) -> do
-              [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocumentToString [withIndent yes]
+              [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocumentToString [withRemoveWS yes]
               pure $ Right res
               -- pure $ Right $ decodeUtf8 $ BL.toStrict res
               -- [res] <- runX $ root [] [makeAds (V.toList v)] >>> writeDocument [withIndent yes] "Ads.xml"
