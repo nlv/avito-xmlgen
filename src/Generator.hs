@@ -59,15 +59,15 @@ data Ad = Ad { adId :: !String
 instance FromNamedRecord Ad where
   parseNamedRecord r = 
       Ad <$> r .: "Id" 
-         <*> (trimString <$> (r .: "DateBegin"))
-         <*> (trimString <$> (r .: "DateEnd"))
-         <*> r .: "AdStatus" 
-         <*> r .: "AllowEmail" 
-         <*> r .: "ManagerName" 
+         <*> (trimString <$> (r .: "DateBegin"  <|> pure ""))
+         <*> (trimString <$> (r .: "DateEnd"  <|> pure ""))
+         <*> (r .: "AdStatus" <|> pure "") 
+         <*> (r .: "AllowEmail" <|> pure "")
+         <*> (r .: "ManagerName" <|> pure "") 
          <*> r .: "ContactPhone" 
          <*> ((L.intercalate ", ") <$> L.filter (not . L.null) <$> sequenceA (L.map (r .:) address))
          <*> r .: "Category" 
-         <*> r .: "Condition" 
+         <*> (r .: "Condition" <|> pure "") 
          <*> r .: "GoodsType" 
          <*> r .: "GoodsSubType" 
          <*> r .: "AdType" 
@@ -96,7 +96,7 @@ generateXML src =
       case csvData' of
         Left err -> pure $ Left err
         Right csvData ->
-          let l = encodeUtf8 $ T.unlines $ L.drop 3 $ T.lines $ decodeUtf8 csvData in
+          let l = encodeUtf8 $ T.unlines $ L.drop 0 $ T.lines $ decodeUtf8 csvData in
           case decodeByName (BL.fromStrict l) of
             Left err -> pure $ Left err
             Right (_, v) -> do
@@ -136,7 +136,7 @@ makeAd ad@(Ad {adGoodsType = "Вакансии", ..}) =
           , mkelem "Category" [] [ txt (adGoodsType ad) ]
           , mkelem "Condition" [] [ txt (adCondition) ]
           , mkelem "Industry" [] [ txt (adGoodsSubType) ]
-          , mkelem "JobType" [] [ txt (adType) ]
+          , mkelem "AdType" [] [ txt (adType) ]
           , mkelem "Title" [] [ txt (adTitle) ]
           , mkelem "Description" [] [ constA (adDescription) >>> mkCdata ]
           , mkelem "Salary" [] [ txt (adPrice) ]
@@ -157,7 +157,7 @@ makeAd ad =
           , mkelem "Condition" [] [ txt (adCondition ad) ]
           , mkelem "GoodsType" [] [ txt (adGoodsType ad) ]
           , mkelem "GoodsSubType" [] [ txt (adGoodsSubType ad) ]
-          , mkelem "Type" [] [ txt (adType ad) ]
+          , mkelem "AdType" [] [ txt (adType ad) ]
           , mkelem "Title" [] [ txt (adTitle ad) ]
           , mkelem "Description" [] [ constA (adDescription ad) >>> mkCdata ]
           , mkelem "Price" [] [ txt (adPrice ad) ]
