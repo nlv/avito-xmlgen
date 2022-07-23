@@ -1,3 +1,6 @@
 .stack-work/
 *~
 *.xml
+*.xlsx
+*.csv
+*.txt
