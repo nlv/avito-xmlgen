@@ -8,10 +8,8 @@ import GHC.Generics
 
 import Control.Applicative
 import Control.Monad (mzero, guard)
--- import qualified Data.ByteString.Lazy as BL -- (fromStrict, toStrict)
-import qualified Data.ByteString.Lazy as BLL -- (fromStrict, toStrict)
-import qualified Data.ByteString as BL -- (fromStrict, toStrict)
--- import qualified Data.ByteString.Char8 as BL 
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString as BS
 import Data.List as L
 import Data.List.Utils (replace)
 import Data.Csv
@@ -49,14 +47,14 @@ generateXML src =
         Left err -> pure $ Left err
         Right csvData ->
           let l = encodeUtf8 $ T.unlines $ L.drop 0 $ T.lines $ decodeUtf8 csvData in
-          case decode NoHeader (BLL.fromStrict l) of
+          case decode NoHeader (BL.fromStrict l) of
             Left err -> pure $ Left err
             Right v -> do
               let v' = mkMap $ L.map V.toList $ V.toList v
               [res] <- runX $ root [] [makeAds v'] >>> writeDocumentToString [withRemoveWS yes]
               pure $ Right res
 
-  where  mkMap :: [[BL.ByteString]] -> [[(BL.ByteString, BL.ByteString)]]
+  where  mkMap :: [[BS.ByteString]] -> [[(BS.ByteString, BS.ByteString)]]
          mkMap (h : rs) = L.map ((L.filter (\(h',_) -> h' /= "")) . L.zip h) rs
          mkMap _        = []
 
@@ -76,27 +74,25 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= conve
                                                              uriQuery = formatParam : gidParam : qs, uriFragment = Nothing}
            return p'''
 
-makeAd :: ArrowXml a => [(BL.ByteString, BL.ByteString)] -> a XmlTree XmlTree
+makeAd :: ArrowXml a => [(BS.ByteString, BS.ByteString)] -> a XmlTree XmlTree
 makeAd vs = mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs
   where dr = L.dropWhileEnd isSpace . L.dropWhile isSpace
         dc = T.unpack . decodeUtf8
 
 makeEl :: ArrowXml a => (String, String) -> a XmlTree XmlTree
-makeEl ("ImageNames", v) = 
-  mkelem "Images" [] $ 
-         L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ L.take 8 $ Split.splitOn ","  v
+makeEl (n, v)
+  | n == "Description" = mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
 
-makeEl ("Description", v) = 
-  mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
+  | n == "ImageNames"  = 
+      mkelem "Images" [] $ L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ L.take 8 $ Split.splitOn ","  v    
+
+  | otherwise          = mkelem n [] [ txt v]
   where
     descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
     descriptionHtml2 d = do
       d1 <- readMarkdown def (pack d)
       d2 <- writeHtml5String def d1
       return $ unpack d2
-
-makeEl (n, v) = mkelem n [] [ txt v]
-
 
 groupAddress :: [(String, String)] -> [(String, String)]
 groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.filter (/= "") . (L.map snd)) *** id) .  L.partition ((`elem` addrElems) . fst)
@@ -109,55 +105,6 @@ groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.
         o "addrHouse"  = 6
         o _            = 7
 
-
-
-
--- makeAd :: ArrowXml a => Ad -> a XmlTree XmlTree
--- makeAd ad@(Ad {adGoodsType = "Вакансии", ..}) = 
---         mkelem "Ad" []
---           [ mkelem "Id" [] [ txt (adId) ]
---           , mkelem "DateBegin" [] [ txt (adDateBegin) ]
---           , mkelem "DateEnd" [] [ txt (adDateEnd) ]
---           , mkelem "Status" [] [ txt (adStatus) ]
---           , mkelem "AllowEmail" [] [ txt (adAllowEmail) ]
---           , mkelem "ManagerName" [] [ txt (adManagerName) ]
---           , mkelem "ContactPhone" [] [ txt (adContactPhone) ]
---           , mkelem "Address" [] [ txt (adAddress) ]
---           , mkelem "Category" [] [ txt (adGoodsType ad) ]
---           , mkelem "Condition" [] [ txt (adCondition) ]
---           , mkelem "Industry" [] [ txt (adGoodsSubType) ]
---           , mkelem "AdType" [] [ txt (adType) ]
---           , mkelem "Title" [] [ txt (adTitle) ]
---           , mkelem "Description" [] [ constA (adDescription) >>> mkCdata ]
---           , mkelem "Salary" [] [ txt (adPrice) ]
---           , mkelem "VideoURL" [] [ txt (adVideoURL) ]
---           , mkelem "Images" [] $ images (adImages)
---           ]
--- makeAd ad = 
---         mkelem "Ad" []
---           [ mkelem "Id" [] [ txt (adId ad) ]
---           , mkelem "DateBegin" [] [ txt (adDateBegin ad) ]
---           , mkelem "DateEnd" [] [ txt (adDateEnd ad) ]
---           , mkelem "Status" [] [ txt (adStatus ad) ]
---           , mkelem "AllowEmail" [] [ txt (adAllowEmail ad) ]
---           , mkelem "ManagerName" [] [ txt (adManagerName ad) ]
---           , mkelem "ContactPhone" [] [ txt (adContactPhone ad) ]
---           , mkelem "Address" [] [ txt (adAddress ad) ]
---           , mkelem "Category" [] [ txt (adCategory ad) ]
---           , mkelem "Condition" [] [ txt (adCondition ad) ]
---           , mkelem "GoodsType" [] [ txt (adGoodsType ad) ]
---           , mkelem "GoodsSubType" [] [ txt (adGoodsSubType ad) ]
---           , mkelem "AdType" [] [ txt (adType ad) ]
---           , mkelem "Title" [] [ txt (adTitle ad) ]
---           , mkelem "Description" [] [ constA (adDescription ad) >>> mkCdata ]
---           , mkelem "Price" [] [ txt (adPrice ad) ]
---           , mkelem "VideoURL" [] [ txt (adVideoURL ad) ]
---           , mkelem "Images" [] $ images (adImages ad)
---           ]
-
--- images :: ArrowXml a => [String] -> [a XmlTree XmlTree]
--- images is = L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ (L.take 8) is
-
-makeAds :: ArrowXml a => [[(BL.ByteString, BL.ByteString)]] -> a XmlTree XmlTree
+makeAds :: ArrowXml a => [[(BS.ByteString, BS.ByteString)]] -> a XmlTree XmlTree
 makeAds as
     = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map makeAd as)
