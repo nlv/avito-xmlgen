@@ -85,6 +85,8 @@ makeEl (n, v)
 
   | n == "ImageNames"  = 
       mkelem "Images" [] $ L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ L.take 8 $ Split.splitOn ","  v    
+  
+  | n `L.elem` optionElems && v /= "" = mkelem n [] $ L.map (\i -> mkelem "Option" [] [ txt i]) $ Split.splitOn "|" v
 
   | otherwise          = mkelem n [] [ txt v]
   where
@@ -93,6 +95,7 @@ makeEl (n, v)
       d1 <- readMarkdown def (pack d)
       d2 <- writeHtml5String def d1
       return $ unpack d2
+    optionElems = ["WorkTypes", "TeamSize", "ContactDays", "WorkDays"]
 
 groupAddress :: [(String, String)] -> [(String, String)]
 groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.filter (/= "") . (L.map snd)) *** id) .  L.partition ((`elem` addrElems) . fst)
