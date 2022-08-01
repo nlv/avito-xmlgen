@@ -84,7 +84,7 @@ makeAd vs = mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map
 makeEl :: ArrowXml a => (String, String) -> a XmlTree XmlTree
 makeEl ("ImageNames", v) = 
   mkelem "Images" [] $ 
-         L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ Split.splitOn ","  v
+         L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ L.take 8 $ Split.splitOn ","  v
 
 makeEl ("Description", v) = 
   mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
