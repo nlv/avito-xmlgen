@@ -39,12 +39,14 @@ import qualified Text.XML.HXT.DOM.XmlNode as Node
 
 data Config = Config {
     confSrc        :: Text
+  , confSkip       :: Int
 }
 
 
 generateXML :: ReaderT Config IO (Either String String)
 generateXML = do
   src <- asks confSrc
+  skip <- asks confSkip
   case makeGoogleExportCSVURI src of
     Nothing -> pure $ Left "Не верный URL"
     Just src' -> do
@@ -52,17 +54,25 @@ generateXML = do
       case csvData' of
         Left err -> pure $ Left err
         Right csvData ->
-          let l = encodeUtf8 $ T.unlines $ L.drop 0 $ T.lines $ decodeUtf8 csvData in
+          let l = encodeUtf8 $ T.unlines $ L.drop skip $ T.lines $ decodeUtf8 csvData in
           case decode NoHeader (BL.fromStrict l) of
             Left err -> pure $ Left err
             Right v -> do
-              let v' = mkMap $ L.map V.toList $ V.toList v
-              [res] <- lift $ runX $ root [] [makeAds v'] >>> writeDocumentToString [withRemoveWS yes]
-              pure $ Right res
+              let v' = L.map V.toList $ V.toList v
+              if checkId v' then do
+                let v'' = mkMap v'
+                [res] <- lift $ runX $ root [] [makeAds v''] >>> writeDocumentToString [withRemoveWS yes]
+                pure $ Right res
+              else 
+                pure $ Left "В файле не найдена колонка Id. Не верно указали сколько строк пропустить надо?"
 
   where  mkMap :: [[BS.ByteString]] -> [[(BS.ByteString, BS.ByteString)]]
          mkMap (h : rs) = L.map ((L.filter (\(h',_) -> h' /= "")) . L.zip h) rs
          mkMap _        = []
+
+
+         checkId (h:_) = "Id" `elem` h
+         checkId _     = False
 
 makeGoogleExportCSVURI :: Text -> Maybe String
 makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= convertURI)

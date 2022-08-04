@@ -8,6 +8,7 @@ import Options.Applicative
 optParser :: Parser Config
 optParser = Config
         <$> argument str (help "URL of data")
+        <*> option auto ( long "skip" <> short 's' <> value 0 <> help "Skip first s lines")
 
 
 main :: IO ()
