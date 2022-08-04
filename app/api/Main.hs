@@ -14,6 +14,7 @@ import Network.Wai.Middleware.Servant.Options
 import Network.HTTP.Types.Method
 
 import System.IO
+import Control.Monad.Reader
 
 
 import qualified Data.Text as T
@@ -45,7 +46,7 @@ server = \src -> fmap (addHeader "attachment; filename=Ads.xml") (getFile src)
 
 getFile :: T.Text -> Handler T.Text
 getFile src = do
-  res <- liftIO $ generateXML src
+  res <- liftIO $ runReaderT generateXML $ Config {confSrc = src}
   case res of
     Left err -> pure $ T.pack err
     Right xml -> pure $ T.pack xml

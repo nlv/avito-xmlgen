@@ -2,13 +2,18 @@ module Main where
 
 import Generator
 
+import Control.Monad.Reader
 import Options.Applicative
 
+optParser :: Parser Config
+optParser = Config
+        <$> argument str (help "URL of data")
+
+
 main :: IO ()
-main = 
-  let ops = argument str (help "URL of data") in do
-  src <- execParser $ info (ops <**> helper) (fullDesc <> progDesc "Converting Avito posts" <> Options.Applicative.header "header")
-  res <- generateXML src
+main = do
+  ops <- execParser $ info (optParser <**> helper) (fullDesc <> progDesc "xml generator for avito" <> header "xmlgen - xml generator for avito") 
+  res <- runReaderT generateXML ops
   case res of
     Left err -> putStrLn err
     Right xml -> putStr xml

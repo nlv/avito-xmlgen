@@ -2,6 +2,7 @@
 
 module Generator
     ( generateXML
+    , Config(..)
     ) where
 
 import GHC.Generics
@@ -15,7 +16,7 @@ import Data.List.Utils (replace)
 import Data.Csv
 import qualified Data.Vector as V
 
-
+import Control.Monad.Reader
 
 import Text.Pandoc
 import Network.Curl.Download
@@ -36,13 +37,18 @@ import Data.List.Split as Split
 import Text.XML.HXT.Core
 import qualified Text.XML.HXT.DOM.XmlNode as Node
 
+data Config = Config {
+    confSrc        :: Text
+}
 
-generateXML :: Text -> IO (Either String String)
-generateXML src = 
+
+generateXML :: ReaderT Config IO (Either String String)
+generateXML = do
+  src <- asks confSrc
   case makeGoogleExportCSVURI src of
     Nothing -> pure $ Left "Не верный URL"
     Just src' -> do
-      csvData' <- openURIWithOpts [CurlFollowLocation True] $ src'
+      csvData' <- lift $ openURIWithOpts [CurlFollowLocation True] $ src'
       case csvData' of
         Left err -> pure $ Left err
         Right csvData ->
@@ -51,7 +57,7 @@ generateXML src =
             Left err -> pure $ Left err
             Right v -> do
               let v' = mkMap $ L.map V.toList $ V.toList v
-              [res] <- runX $ root [] [makeAds v'] >>> writeDocumentToString [withRemoveWS yes]
+              [res] <- lift $ runX $ root [] [makeAds v'] >>> writeDocumentToString [withRemoveWS yes]
               pure $ Right res
 
   where  mkMap :: [[BS.ByteString]] -> [[(BS.ByteString, BS.ByteString)]]

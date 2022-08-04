@@ -41,6 +41,7 @@ dependencies:
 - http-types
 # - http-client
 - warp
+- mtl
 
 library:
   source-dirs: src
