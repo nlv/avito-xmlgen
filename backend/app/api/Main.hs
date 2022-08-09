@@ -22,7 +22,7 @@ import qualified Data.Text.IO as T
 
 import Control.Monad.IO.Class
 
-type Api = Capture "src" T.Text :> QueryParam "skip" Int :> Servant.Get '[PlainText, JSON] (Headers '[Header "Content-Disposition" String] T.Text)
+type Api = QueryParam "src" T.Text :> QueryParam "skip" Int :> Servant.Get '[PlainText, JSON] (Headers '[Header "Content-Disposition" String] T.Text)
 
 api :: Proxy Api
 api = Proxy
@@ -42,7 +42,7 @@ mkApp = return $ cors (const $ Just policy) $ provideOptions api $ serve api ser
     policy = simpleCorsResourcePolicy { corsRequestHeaders = [ "content-type" ], corsMethods = [methodGet, methodPost, methodDelete, methodOptions] }
 
 server :: Server Api
-server = \src skip -> fmap (addHeader "attachment; filename=Ads.xml") (getFile $ Config {confSrc = src, confSkip = maybe 0 id skip})
+server = \src skip -> fmap (addHeader "attachment; filename=Ads.xml") (getFile $ Config {confSrc = maybe "" id src, confSkip = maybe 0 id skip})
 
 getFile :: Config -> Handler T.Text
 getFile config = do
