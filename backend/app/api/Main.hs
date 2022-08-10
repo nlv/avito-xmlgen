@@ -21,6 +21,15 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import Control.Monad.IO.Class
+import Options.Applicative
+
+data AppConfig = AppConfig {
+    appConfPort :: Int
+}
+
+optParser :: Parser AppConfig
+optParser = AppConfig
+        <$> option auto ( long "port" <> short 'p' <> help "port")
 
 type Api = QueryParam "src" T.Text :> QueryParam "skip" Int :> Servant.Get '[PlainText, JSON] (Headers '[Header "Content-Disposition" String] T.Text)
 
@@ -29,7 +38,8 @@ api = Proxy
 
 main :: IO ()
 main = do
-  let port = 3031
+  ops <- execParser $ info (optParser <**> helper) (fullDesc <> progDesc "API for avito xml generator" <> header "xmlgen-api - API for avito xml generator") 
+  let port = appConfPort ops
       settings =
         setPort port $
         setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
@@ -46,6 +56,7 @@ server = \src skip -> fmap (addHeader "attachment; filename=Ads.xml") (getFile $
 
 getFile :: Config -> Handler T.Text
 getFile config = do
+  -- liftIO $ putStrLn $ "Запустили"
   res <- liftIO $ runReaderT generateXML $ config
   case res of
     Left err -> pure $ T.pack err

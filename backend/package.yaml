@@ -69,6 +69,7 @@ executables:
     - servant
     - servant-server  
     - servant-options
+    - optparse-applicative
   randtext-exe:
     main:                Main.hs
     source-dirs:         app/randtext

@@ -75,6 +75,7 @@ executable avito-xmlapi-exe
     , hxt
     , modern-uri
     , mtl
+    , optparse-applicative
     , pandoc
     , servant
     , servant-options
