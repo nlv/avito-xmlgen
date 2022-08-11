@@ -1,4 +1,4 @@
 #!/bin/bash
 
-stack exec avito-xmlapi-exe &
+stack exec avito-xmlapi-exe -- --port "$PORT" &
 
