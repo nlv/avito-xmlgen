@@ -12503,7 +12503,7 @@ var $author$project$App$sendRequestButton = function (ready) {
 						A3($mdgriffith$elm_ui$Element$rgb, 0, 255, 255)),
 					$author$project$App$buttonStyle),
 				{
-					label: $mdgriffith$elm_ui$Element$text('Рандомизировать2'),
+					label: $mdgriffith$elm_ui$Element$text('Рандомизировать'),
 					onPress: $elm$core$Maybe$Just($author$project$App$SendRequestButtonPressed)
 				}) : A2(
 				$mdgriffith$elm_ui$Element$Input$button,
