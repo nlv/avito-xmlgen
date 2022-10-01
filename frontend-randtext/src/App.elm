@@ -113,7 +113,7 @@ sendRequestButton ready =
       if ready then 
         EI.button 
           ((Background.color <| E.rgb 0 255 255) :: buttonStyle)
-          { onPress = Just SendRequestButtonPressed, label = E.text "Рандомизировать2" } 
+          { onPress = Just SendRequestButtonPressed, label = E.text "Рандомизировать" } 
       else
         EI.button 
           ((Background.color <| E.rgb 220 220 220) :: (Region.description "Укажите текст") :: buttonStyle)
