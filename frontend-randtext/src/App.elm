@@ -10,6 +10,9 @@ import Element.Background as Background
 import Http
 import Browser
 import Browser.Navigation
+import Json.Encode as Encode
+import Bytes exposing (Bytes)
+import File.Download as Download
 
 import Url.Builder as Url
 import Html.Attributes exposing (rows)
@@ -22,7 +25,9 @@ type Msg =
   | DisabledSendRequestButtonPressed
   | SendRequestButtonPressed
 
-  | RequestSent (Result Http.Error ())
+  -- | RequestSent (Result Http.Error ())
+
+  | FormUploaded (Result Http.Error Bytes)
   
 type alias Model = {
     count : Int
@@ -35,12 +40,13 @@ initModel = {
   , text  = ""
   }
 
--- sendRequest : Int -> String -> Cmd Msg
--- sendRequest skip src = 
---     Http.get { 
---         url = "api/" ++ Url.toQuery [Url.string "src" src, Url.int "skip" skip]
---       , expect = Http.expectWhatever RequestSent
---       }
+sendRequest : Int -> String -> Cmd Msg
+sendRequest count text = 
+    Http.post { 
+        url = "api/"
+      , body = Http.stringBody "application/json" <| Encode.encode 0 <| Encode.object [("count", Encode.int count), ("text", Encode.string text)]
+      , expect = Http.expectBytesResponse FormUploaded (resolve Ok)
+      }
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update action model =
@@ -53,11 +59,20 @@ update action model =
 
     SendRequestButtonPressed -> 
       -- if model.src /= "" then (model, sendRequest model.skip model.src) else (model, Cmd.none)
-      if model.text /= "" then (model, Browser.Navigation.load <| "api/" ++ Url.toQuery [Url.string "text" model.text, Url.int "count" model.count]) else (model, Cmd.none)
+      if model.text /= "" then (model, sendRequest model.count model.text) else (model, Cmd.none)
 
     DisabledSendRequestButtonPressed -> (model, Cmd.none)
 
-    RequestSent _ -> (model, Cmd.none)
+    -- RequestSent _ -> (model, Cmd.none)
+
+    FormUploaded (Ok response) ->
+            ( model, downloadFile response )
+    FormUploaded (Err err) ->
+            ( model, Cmd.none )  
+
+downloadFile : Bytes -> Cmd msg
+downloadFile fileContent =
+    Download.bytes "result.xlsx" "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" fileContent              
 
 main : Program () Model Msg
 main =  Browser.element { init = \_ -> (initModel, Cmd.none), update = update, view = view, subscriptions = \_ -> Sub.none}
@@ -119,3 +134,21 @@ sendRequestButton ready =
           ((Background.color <| E.rgb 220 220 220) :: (Region.description "Укажите текст") :: buttonStyle)
           { onPress = Just DisabledSendRequestButtonPressed, label = E.text "Рандомизировать" } 
     ]
+
+resolve : (body -> Result String a) -> Http.Response body -> Result Http.Error a
+resolve toResult response =
+    case response of
+        Http.BadUrl_ url ->
+            Err (Http.BadUrl url)
+
+        Http.Timeout_ ->
+            Err Http.Timeout
+
+        Http.NetworkError_ ->
+            Err Http.NetworkError
+
+        Http.BadStatus_ metadata _ ->
+            Err (Http.BadStatus metadata.statusCode)
+
+        Http.GoodStatus_ _ body ->
+            Result.mapError Http.BadBody (toResult body)
