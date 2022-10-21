@@ -11,6 +11,7 @@ import Control.Applicative
 import Control.Monad (mzero, guard)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import Data.List as L
 import Data.List.Utils (replace)
 import Data.Csv
@@ -90,22 +91,24 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= conve
                                                              uriQuery = formatParam : gidParam : qs, uriFragment = Nothing}
            return p'''
 
-makeAd :: ArrowXml a => [(BS.ByteString, BS.ByteString)] -> a XmlTree XmlTree
+makeAd :: (ArrowIO a, ArrowXml a) => [(BS.ByteString, BS.ByteString)] -> a XmlTree XmlTree
 makeAd vs = mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs
   where dr = L.dropWhileEnd isSpace . L.dropWhile isSpace
         dc = T.unpack . decodeUtf8
 
-makeEl :: ArrowXml a => (String, String) -> a XmlTree XmlTree
+makeEl :: (ArrowIO a, ArrowXml a) => (String, String) -> a XmlTree XmlTree
 makeEl (n, v)
   | n == "Description" = mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
 
   | n == "ImageNames"  = 
-      mkelem "Images" [] $ L.map (\i -> mkelem "Image" [ sattr "url" i ] []) $ L.take 8 $ Split.splitOn ","  v    
+      mkelem "Images" [] $ L.map makeImage $ L.take 8 $ Split.splitOn ","  v    
   
   | n `L.elem` optionElems && v /= "" = mkelem n [] $ L.map (\i -> mkelem "Option" [] [ txt i]) $ Split.splitOn "|" v
 
   | otherwise          = mkelem n [] [ txt v]
   where
+    makeImage i = (\j -> mkelem "Image" [ sattr "url" j] []) $< arrIO0 (shortUrl i)
+    shortUrl i = (either (const i) BS8.unpack) <$> (openURIWithOpts [CurlFollowLocation True] $ "https://clck.ru/-" ++ "-?url=" ++ i)
     descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
     descriptionHtml2 d = do
       d1 <- readMarkdown def (pack d)
@@ -124,6 +127,6 @@ groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.
         o "addrHouse"  = 6
         o _            = 7
 
-makeAds :: ArrowXml a => [[(BS.ByteString, BS.ByteString)]] -> a XmlTree XmlTree
+makeAds :: (ArrowIO a, ArrowXml a) => [[(BS.ByteString, BS.ByteString)]] -> a XmlTree XmlTree
 makeAds as
     = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map makeAd as)
