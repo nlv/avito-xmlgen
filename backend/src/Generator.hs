@@ -1,4 +1,4 @@
-{-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances, RecordWildCards, TupleSections #-}
+{-# LANGUAGE  DeriveGeneric, OverloadedStrings, FlexibleInstances, RecordWildCards, TupleSections, Arrows #-}
 
 module Generator
     ( generateXML
@@ -15,6 +15,7 @@ import qualified Data.ByteString.Char8 as BS8
 import Data.List as L
 import Data.List.Utils (replace)
 import Data.Csv
+import qualified Data.Map as Map
 import qualified Data.Vector as V
 
 import Control.Monad.Reader
@@ -37,6 +38,7 @@ import Data.List.Split as Split
 
 import Text.XML.HXT.Core
 import qualified Text.XML.HXT.DOM.XmlNode as Node
+import Text.XML.HXT.Arrow.XmlState.RunIOStateArrow
 
 data Config = Config {
     confSrc        :: Text
@@ -62,7 +64,7 @@ generateXML = do
               let v' = L.map V.toList $ V.toList v
               if checkId v' then do
                 let v'' = mkMap v'
-                [res] <- lift $ runX $ root [] [makeAds v''] >>> writeDocumentToString [withRemoveWS yes]
+                [res] <- lift $ runXIOState (initialState $ Map.empty)  $ root [] [makeAds v''] >>> writeDocumentToString [withRemoveWS yes]
                 pure $ Right res
               else 
                 pure $ Left "В файле не найдена колонка Id. Не верно указали сколько строк пропустить надо?"
@@ -91,12 +93,12 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= conve
                                                              uriQuery = formatParam : gidParam : qs, uriFragment = Nothing}
            return p'''
 
-makeAd :: (ArrowIO a, ArrowXml a) => [(BS.ByteString, BS.ByteString)] -> a XmlTree XmlTree
-makeAd vs = mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs
+makeAd :: [(BS.ByteString, BS.ByteString)] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+makeAd vs = (mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs)
   where dr = L.dropWhileEnd isSpace . L.dropWhile isSpace
         dc = T.unpack . decodeUtf8
 
-makeEl :: (ArrowIO a, ArrowXml a) => (String, String) -> a XmlTree XmlTree
+makeEl :: (String, String) -> IOStateArrow (Map.Map String String) XmlTree XmlTree
 makeEl (n, v)
   | n == "Description" = mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
 
@@ -107,8 +109,20 @@ makeEl (n, v)
 
   | otherwise          = mkelem n [] [ txt v]
   where
-    makeImage i = (\j -> mkelem "Image" [ sattr "url" j] []) $< arrIO0 (shortUrl i)
-    shortUrl i = (either (const i) BS8.unpack) <$> (openURIWithOpts [CurlFollowLocation True] $ "https://clck.ru/-" ++ "-?url=" ++ i)
+    makeImage :: String -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+    makeImage i = 
+      proc k -> do
+        cache <- getUserState -< ()
+        case Map.lookup i cache of
+          Just i' -> (\s -> mkelem "Image" [ sattr "url" s] []) $< returnA -< i'
+          Nothing -> do
+            i'' <- arrIO0 (shortUrl i) -< ()
+            setUserState -< Map.insert i i'' cache
+            (\s -> mkelem "Image" [ sattr "url" s] []) $< returnA -< i''
+
+    shortUrl i 
+      | L.isPrefixOf "https://clck.ru/" i = pure i
+      | otherwise = (either (const i) BS8.unpack) <$> (openURIWithOpts [CurlFollowLocation True] $ "https://clck.ru/-" ++ "-?url=" ++ i)
     descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
     descriptionHtml2 d = do
       d1 <- readMarkdown def (pack d)
@@ -127,6 +141,6 @@ groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.
         o "addrHouse"  = 6
         o _            = 7
 
-makeAds :: (ArrowIO a, ArrowXml a) => [[(BS.ByteString, BS.ByteString)]] -> a XmlTree XmlTree
+makeAds :: [[(BS.ByteString, BS.ByteString)]] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
 makeAds as
     = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map makeAd as)
