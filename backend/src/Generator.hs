@@ -103,7 +103,7 @@ makeEl (n, v)
   | n == "Description" = mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
 
   | n == "ImageNames"  = 
-      mkelem "Images" [] $ L.map makeImage $ L.take 8 $ Split.splitOn ","  v    
+      mkelem "Images" [] $ L.map makeImage $ L.take 10 $ Split.splitOn ","  v    
   
   | n `L.elem` optionElems && v /= "" = mkelem n [] $ L.map (\i -> mkelem "Option" [] [ txt i]) $ Split.splitOn "|" v
 
