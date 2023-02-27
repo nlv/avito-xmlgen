@@ -43,6 +43,7 @@ import Text.XML.HXT.Arrow.XmlState.RunIOStateArrow
 data Config = Config {
     confSrc        :: Text
   , confSkip       :: Int
+  , shortUrl       :: Bool
 }
 
 
@@ -50,6 +51,7 @@ generateXML :: ReaderT Config IO (Either String String)
 generateXML = do
   src <- asks confSrc
   skip <- asks confSkip
+  shortUrl <- asks shortUrl
   case makeGoogleExportCSVURI src of
     Nothing -> pure $ Left "Не верный URL"
     Just src' -> do
@@ -64,7 +66,7 @@ generateXML = do
               let v' = L.map V.toList $ V.toList v
               if checkId v' then do
                 let v'' = mkMap v'
-                [res] <- lift $ runXIOState (initialState $ Map.empty)  $ root [] [makeAds v''] >>> writeDocumentToString [withRemoveWS yes]
+                [res] <- lift $ runXIOState (initialState $ Map.empty)  $ root [] [makeAds shortUrl v''] >>> writeDocumentToString [withRemoveWS yes]
                 pure $ Right res
               else 
                 pure $ Left "В файле не найдена колонка Id. Не верно указали сколько строк пропустить надо?"
@@ -93,34 +95,35 @@ makeGoogleExportCSVURI x = maybe Nothing (Just . renderStr) ((mkURI x) >>= conve
                                                              uriQuery = formatParam : gidParam : qs, uriFragment = Nothing}
            return p'''
 
-makeAd :: [(BS.ByteString, BS.ByteString)] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
-makeAd vs = (mkelem "Ad" [] $ L.map (makeEl . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs)
+makeAd :: Bool -> [(BS.ByteString, BS.ByteString)] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+makeAd shortUrl vs = (mkelem "Ad" [] $ L.map ((makeEl shortUrl) . (dr *** dr)) $ groupAddress $ L.map (dc *** dc) vs)
   where dr = L.dropWhileEnd isSpace . L.dropWhile isSpace
         dc = T.unpack . decodeUtf8
 
-makeEl :: (String, String) -> IOStateArrow (Map.Map String String) XmlTree XmlTree
-makeEl (n, v)
+makeEl :: Bool -> (String, String) -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+makeEl shortUrl (n, v)
   | n == "Description" = mkelem "Description" [] [constA ( descriptionHtml v) >>> mkCdata]
 
   | n == "ImageNames"  = 
-      mkelem "Images" [] $ L.map makeImage $ L.take 10 $ Split.splitOn ","  v    
+      mkelem "Images" [] $ L.map (makeImage shortUrl) $ L.take 10 $ Split.splitOn ","  v    
   
   | n `L.elem` optionElems && v /= "" = mkelem n [] $ L.map (\i -> mkelem "Option" [] [ txt i]) $ Split.splitOn "|" v
 
   | otherwise          = mkelem n [] [ txt v]
   where
-    makeImage :: String -> IOStateArrow (Map.Map String String) XmlTree XmlTree
-    makeImage i = 
+    makeImage :: Bool -> String -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+    makeImage False i = mkelem "Image" [ sattr "url" i] []      
+    makeImage True i = 
       proc k -> do
         cache <- getUserState -< ()
         case Map.lookup i cache of
           Just i' -> (\s -> mkelem "Image" [ sattr "url" s] []) $< returnA -< i'
           Nothing -> do
-            i'' <- arrIO0 (shortUrl i) -< ()
+            i'' <- arrIO0 (short i) -< ()
             setUserState -< Map.insert i i'' cache
             (\s -> mkelem "Image" [ sattr "url" s] []) $< returnA -< i''
 
-    shortUrl i 
+    short i 
       | L.isPrefixOf "https://clck.ru/" i = pure i
       | otherwise = (either (const i) BS8.unpack) <$> (openURIWithOpts [CurlFollowLocation True] $ "https://clck.ru/-" ++ "-?url=" ++ i)
     descriptionHtml d = either (const "Ошибка в описании") id $ runPure (descriptionHtml2 d)
@@ -141,6 +144,6 @@ groupAddress = uncurry (:) . ((("Address",) . L.intercalate ", " . sortOn o . L.
         o "addrHouse"  = 6
         o _            = 7
 
-makeAds :: [[(BS.ByteString, BS.ByteString)]] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
-makeAds as
-    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map makeAd as)
+makeAds :: Bool -> [[(BS.ByteString, BS.ByteString)]] -> IOStateArrow (Map.Map String String) XmlTree XmlTree
+makeAds shortUrl as
+    = mkelem "Ads" [ sattr "formatVersion" "3", sattr "target" "Avito.ru" ] (L.map (makeAd shortUrl) as)

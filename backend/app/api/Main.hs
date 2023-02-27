@@ -31,7 +31,7 @@ optParser :: Parser AppConfig
 optParser = AppConfig
         <$> option auto ( long "port" <> short 'p' <> help "port")
 
-type Api = QueryParam "src" T.Text :> QueryParam "skip" Int :> Servant.Get '[PlainText, JSON] (Headers '[Header "Content-Disposition" String] T.Text)
+type Api = QueryParam "src" T.Text :> QueryParam "skip" Int :> QueryFlag "shortUrl" :> Servant.Get '[PlainText, JSON] (Headers '[Header "Content-Disposition" String] T.Text)
 
 api :: Proxy Api
 api = Proxy
@@ -52,7 +52,7 @@ mkApp = return $ cors (const $ Just policy) $ provideOptions api $ serve api ser
     policy = simpleCorsResourcePolicy { corsRequestHeaders = [ "content-type" ], corsMethods = [methodGet, methodPost, methodDelete, methodOptions] }
 
 server :: Server Api
-server = \src skip -> fmap (addHeader "attachment; filename=Ads.xml") (getFile $ Config {confSrc = maybe "" id src, confSkip = maybe 0 id skip})
+server = \src skip shortUrl -> fmap (addHeader "attachment; filename=Ads.xml") (getFile $ Config {confSrc = maybe "" id src, confSkip = maybe 0 id skip, shortUrl = shortUrl})
 
 getFile :: Config -> Handler T.Text
 getFile config = do

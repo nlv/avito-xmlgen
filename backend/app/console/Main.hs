@@ -9,6 +9,7 @@ optParser :: Parser Config
 optParser = Config
         <$> argument str (help "URL of data")
         <*> option auto ( long "skip" <> short 's' <> value 0 <> help "Skip first s lines")
+        <*> option auto ( long "shortUrl" <> short 'h' <> value False <> help "Short image urls?")
 
 
 main :: IO ()
