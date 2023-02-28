@@ -17,6 +17,7 @@ type Msg =
     
     SkipInput String
   | SrcInput String
+  | ShortUrlInput Bool
 
   | DisabledSendRequestButtonPressed
   | SendRequestButtonPressed
@@ -26,12 +27,14 @@ type Msg =
 type alias Model = {
     skip : Int
   , src  : String
+  , shortUrl : Bool
   }
 
 initModel : Model
 initModel = {
     skip = 0
   , src  = ""
+  , shortUrl = False
   }
 
 -- sendRequest : Int -> String -> Cmd Msg
@@ -48,11 +51,14 @@ update action model =
 
     SkipInput skip -> ({model | skip = String.toInt (if skip == "" then "0" else skip) |> Maybe.withDefault model.skip}, Cmd.none)
 
+    ShortUrlInput shortUrl -> ({model | shortUrl = shortUrl}, Cmd.none)
+
     SrcInput src -> ({model | src = src}, Cmd.none)
 
     SendRequestButtonPressed -> 
-      -- if model.src /= "" then (model, sendRequest model.skip model.src) else (model, Cmd.none)
-      if model.src /= "" then (model, Browser.Navigation.load <| "api/" ++ Url.toQuery [Url.string "src" model.src, Url.int "skip" model.skip]) else (model, Cmd.none)
+      let shortUrlParam = if model.shortUrl then "&shortUrl" else ""
+      in
+      if model.src /= "" then (model, Browser.Navigation.load <| "api/" ++ Url.toQuery [Url.string "src" model.src, Url.int "skip" model.skip] ++ shortUrlParam) else (model, Cmd.none)
 
     DisabledSendRequestButtonPressed -> (model, Cmd.none)
 
@@ -63,7 +69,7 @@ main =  Browser.element { init = \_ -> (initModel, Cmd.none), update = update, v
 
 view : Model -> Html.Html Msg
 view model = 
-    E.layout [] <| E.column [E.padding 10] <| [skipInput model.skip, srcInput model.src, sendRequestButton (model.src /= "")]
+    E.layout [] <| E.column [E.padding 10] <| [skipInput model.skip, shortUrlInput model.shortUrl, srcInput model.src, sendRequestButton (model.src /= "")]
 
 lableStyle : List (E.Attribute Msg) 
 lableStyle = [E.width <| E.minimum 200 E.fill]
@@ -82,6 +88,20 @@ skipInput skip =
           text = String.fromInt skip, 
           placeholder = Nothing, 
           label = EI.labelLeft [] <| E.el lableStyle <| E.text "Строк до заголовка:"
+        }
+    ]
+
+shortUrlInput : Bool -> E.Element Msg
+shortUrlInput shortUrl = 
+  E.row 
+    rowStyle [
+      EI.checkbox 
+        []
+        {
+          onChange = ShortUrlInput, 
+          icon = EI.defaultCheckbox,
+          checked = shortUrl, 
+          label = EI.labelLeft [] <| E.el lableStyle <| E.text "Сокращать ссылки:"
         }
     ]
 
